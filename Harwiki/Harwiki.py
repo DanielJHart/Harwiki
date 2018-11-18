@@ -1,42 +1,65 @@
 import os
 import Constant
-import structs
+import Structs
 
 # Global Variables
 
 header = "<!DOCTYPE html>\n<html>\n"
 footer = "\n</html>"
 wikiName = ""
-
+handlingTable = False
+# 
 
 # Functions
+def IsTableItem(x: str):
+    return x == Constant.TABLEIMAGE or x == Constant.TABLEROW
+
+def SetTagsAndReplace(begTag: str, endTag: str, line: str, replace: str, repWith: str):
+    line = line.replace(replace + " ", repWith, 1)  
+    global handlingTable
+
+    if handlingTable and IsTableItem(replace):
+        endTag += "\n</tbody>\n</table>"
+        handlingTable = False
+    
+    return begTag, endTag, line
+
 def FormatLineToHTML(line: str):
     begTag = ""
     endTag = ""
     content = ""
     isHeader = False
-
-    if line.endswith("\n"):
-        line = line[:-1]
+    global handlingTable
 
     if line.startswith(Constant.HEADER3):
-        begTag = "\n<h3>"
-        endTag = "</h3>"
-        line = line.replace(Constant.HEADER3 + " ", "", 1)
+        begTag, endTag, line = SetTagsAndReplace("\n<h3>", "</h3>", line, Constant.HEADER3, "")
         isHeader = True
     elif line.startswith(Constant.HEADER2):
-        begTag = "\n<h2>"
-        endTag = "</h2>"
-        line = line.replace(Constant.HEADER2 + " ", "", 1)
+        begTag, endTag, line = SetTagsAndReplace("\n<h2>", "</h2>", line, Constant.HEADER2, "")
         isHeader = True
     elif line.startswith(Constant.HEADER1):
-        begTag = "\n<h1>"
-        endTag = "</h1>"
-        line = line.replace(Constant.HEADER1 + " ", "", 1)
+        begTag, endTag, line = SetTagsAndReplace("\n<h1>", "</h1>", line, Constant.HEADER1, "")
         isHeader = True
+    elif line.startswith(Constant.PARAGRAPH):
+        begTag, endTag, line = SetTagsAndReplace("\n<p>", "</p>", line, Constant.PARAGRAPH, "\n")
+    elif line.startswith(Constant.TABLE):
+        begTag, endTag, line = SetTagsAndReplace("\n<table>\n<tbody>", "", line, Constant.TABLE, "\n")
+        handlingTable = True
+    elif line.startswith(Constant.TABLEROW):
+        begTag, endTag, line = SetTagsAndReplace("\n<tr>", "</tr>", line, Constant.TABLEROW, "\n")
+        
 
-    if not isHeader:
-        content += "\n"
+#    i = -1
+#    i = line.find(Constant.LINK)
+#    if i >= 0:
+#        endOfLink = line.index("]", i) # Gets the length of the link
+#        startOfText = line.index("(", endOfLink)
+#        endOfText = line.index(")", endOfLink)
+        
+        
+
+    if isHeader:
+        line = line[:-1]
 
     content += line
 
