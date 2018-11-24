@@ -4,7 +4,7 @@ import Structs
 
 # Global Variables
 
-header = "<!DOCTYPE html>\n<html>\n"
+header = "<!DOCTYPE html>\n<html>\n<head>\n"
 footer = "\n</html>"
 wikiName = ""
 handlingTable = False
@@ -96,6 +96,30 @@ def FormatLineToHTML(line: str):
 	return begTag + content + endTag
 # ~FormatLineToHTML
 
+def CreateSideBar():
+	output = ""
+	output += "<div id=\"mw-navigation\"><div id=\"mw-panel\">"
+	# Here is the side bar
+	output += "<div class=\"portal\" role=\"navigation\" id=\"p-interaction\" aria-labelledby=\"p-interaction-label\">"
+	output += "<h3 id=\"p-interaction-label\">Pages</h3>"
+	output += "<div class=\"body\">"
+	output += "<ul>"
+
+	listOfPages.sort()
+
+	for p in listOfPages:
+		correctedName = p[p.rfind("/") + 1 : -5]
+		correctedText = p
+		correctedText = correctedText.replace(wikiName + "/", "")
+		correctedText = correctedText[:-5]
+		correctedText = correctedText.replace(" ", "%20")
+		correctedText = correctedText + ".html"
+		htmlLinkText = correctedText
+		output += "<li>" + "<a href=\"" + htmlLinkText + "\" title=\"" + correctedName + "\">" + correctedName + "</a></li>"
+
+	output += "</div></div>\n</body>"
+	return output
+
 def CreatePage(name: str):
 	global wikiName
 	file = open(name, "r")
@@ -105,13 +129,15 @@ def CreatePage(name: str):
 	fileContent = file.readlines()
 
 	construct = header
-	construct += "<head>\n<link rel=\"stylesheet\" type=\"text/css\" href=\"shared.css\">\n<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">\n<title>" + name + "</title>\n</head>"
+	construct += "<link rel=\"stylesheet\" type=\"CSS/text/css\" href=\"shared.css\">\n<link rel=\"stylesheet\" type=\"text/css\" href=\"CSS/style.css\">"
+	construct += "\n<title>" + name + "</title>\n</head>"
 	construct += "\n<body>\n<div id=\"content\" class=\"mw-body\" role=\"main\">\n<div id=\"bodyContent\" class=\"mw-body-content\">"
 
 	for c in fileContent:
 		construct += FormatLineToHTML(c)
 	
-	construct += "\n</div>\n</div>\n<div id=\"mw-navigation\"><div id=\"mw-panel\"></div></div>\n</body>"
+	construct += "\n</div>\n</div>\n"
+	construct += CreateSideBar()
 	construct += footer
 
 	out = open(name + ".html", "w")
