@@ -38,8 +38,14 @@ def HandleTableRow(line: str):
 
 def HandleTableImage(line: str):
 	begTag, endTag, line = SetTagsAndReplace("\n<tr>", "</tr>", line, Constant.TABLEIMAGE, "\n")
+
+	dashPos = line.find(" - ")
+
 	content = ""
-	content += "<td colspan=\"2\"><img style=\"width: 100%\" src=\"" + line + "\"></td>"
+	if dashPos < 0:
+		content += "<td colspan=\"2\"><img style=\"width: 100%\" src=\"" + line + "\"></td>"
+	else:
+		content += "<td colspan=\"2\"><img style=\"width: 100%\" src=\"" + line[:dashPos] + "\"></td></tr><tr><td colspan=\"2\" style=\"font-style: italic; text-align: center; font-weight: 500;\">" + line[dashPos + 3:] + "</td>"
 	return begTag, endTag, content
 
 def HandleTableSubheading(line: str):
