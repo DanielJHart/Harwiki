@@ -15,20 +15,43 @@ listOfPages = list()
 # Functions
 
 def IsTableItem(x: str):
-	return x == Constant.TABLEIMAGE or x == Constant.TABLEROW
+	return x == Constant.TABLEIMAGE or x == Constant.TABLEROW or x == Constant.TABLESUBHEADING or x == Constant.TABLEHEADING
 # ~IsTableItem
 
 def SetTagsAndReplace(begTag: str, endTag: str, line: str, replace: str, repWith: str):
 	line = line.replace(replace + " ", repWith, 1)  
 	global handlingTable
 
-	if handlingTable and IsTableItem(replace):
-		endTag += "\n</tbody>\n</table>"
+	if handlingTable and not IsTableItem(replace):
+		begTag = "\n</tbody>\n</table>" + begTag
 		handlingTable = False
 	
 	return begTag, endTag, line
 # ~SetTagsAndReplace
 
+def HandleTableRow(line: str):
+	begTag, endTag, line = SetTagsAndReplace("\n<tr>", "</tr>", line, Constant.TABLEROW, "\n")
+	dashIndex = line.find("-")
+	content = ""
+	content += "<td style=\"width: 50%\">" + line[:dashIndex] + "</td><td>" + line[dashIndex + 2: -1] + "</td>"
+	return begTag, endTag, content
+
+def HandleTableImage(line: str):
+	begTag, endTag, line = SetTagsAndReplace("\n<tr>", "</tr>", line, Constant.TABLEIMAGE, "\n")
+	content = ""
+	content += "<td colspan=\"2\"><img style=\"width: 100%\" src=\"" + line + "\"></td>"
+	return begTag, endTag, content
+
+def HandleTableSubheading(line: str):
+	begTag, endTag, line = SetTagsAndReplace("\n<tr>", "</tr>", line, Constant.TABLESUBHEADING, "\n")
+	content = ""
+	content += "<td colspan=\"2\" style=\"width: 100%; font-style: italic; text-align: center; font-weight: 500;\">" + line + "</td>"
+	return begTag, endTag, content
+
+def HandleTableHeading(line: str):
+	begTag, endTag, line = SetTagsAndReplace("\n<tr><th colspan=\"2\" style=\"text-align: center; font-weight: bold; width: 100%;\">", "</th></tr>", line, Constant.TABLEHEADING, "\n")
+	return begTag, endTag, line
+	
 def FormatLineToHTML(line: str):
 	begTag = ""
 	endTag = ""
@@ -43,16 +66,24 @@ def FormatLineToHTML(line: str):
 		begTag, endTag, line = SetTagsAndReplace("\n<h2>", "</h2>", line, Constant.HEADER2, "")
 		isHeader = True
 	elif line.startswith(Constant.HEADER1):
-		begTag, endTag, line = SetTagsAndReplace("\n<h1 id=\"firstHeading\" class=\"firstHeading\">", "</h1>", line, Constant.HEADER1, "")
+		begTag, endTag, line = SetTagsAndReplace("\n<h1\">", "</h1>", line, Constant.HEADER1, "")
 		isHeader = True
-	elif line.startswith(Constant.PARAGRAPH):
-		begTag, endTag, line = SetTagsAndReplace("\n<p>", "</p>", line, Constant.PARAGRAPH, "\n")
 	elif line.startswith(Constant.TABLE):
-		begTag, endTag, line = SetTagsAndReplace("\n<table>\n<tbody>", "", line, Constant.TABLE, "")
+		begTag, endTag, line = SetTagsAndReplace("\n<table class=\"infobox data\" style=\"width:22em\">\n<tbody>", "", line, Constant.TABLE, "")
 		handlingTable = True
 	elif line.startswith(Constant.TABLEROW):
-		begTag, endTag, line = SetTagsAndReplace("\n<tr>", "</tr>", line, Constant.TABLEROW, "\n")
-		
+		begTag, endTag, line = HandleTableRow(line)
+	elif line.startswith(Constant.TABLEHEADING):
+		begTag, endTag, line = HandleTableHeading(line)
+	elif line.startswith(Constant.TABLESUBHEADING):
+		begTag, endTag, line = HandleTableSubheading(line)
+	elif line.startswith(Constant.TABLEIMAGE):
+		begTag, endTag, line = HandleTableImage(line)
+	elif line.startswith(Constant.COMMENT):
+		begTag, endTag, line = "", "", ""
+	else:
+		begTag, endTag, line = SetTagsAndReplace("\n<p>", "</p>", line, "", "\n")
+
 	if isHeader:
 		line = line[:-1]
 
@@ -125,18 +156,25 @@ def CreatePage(name: str):
 	file = open(name, "r")
 	name = name.replace(".wiki", "")
 	print("Creating page: " + name)
+	slashPos = name.rfind("/")
 
 	fileContent = file.readlines()
 
+	styleSheetLocation = ""
+	styleSheetLocation += os.getcwd().replace("\\", "/")
+	styleSheetLocation += "/" + wikiName + "/CSS/"
+
 	construct = header
-	construct += "<link rel=\"stylesheet\" type=\"CSS/text/css\" href=\"shared.css\">\n<link rel=\"stylesheet\" type=\"text/css\" href=\"CSS/style.css\">"
+	construct += "<link rel=\"stylesheet\" type=\"text/css\" href=\"" + styleSheetLocation + "site.css\">\n<link rel=\"stylesheet\" type=\"text/css\" href=\"" + styleSheetLocation + "style.css\">"
 	construct += "\n<title>" + name + "</title>\n</head>"
-	construct += "\n<body>\n<div id=\"content\" class=\"mw-body\" role=\"main\">\n<div id=\"bodyContent\" class=\"mw-body-content\">"
+	construct += "\n<body>\n<div id=\"content\" class=\"mw-body\" role=\"main\">\n"
+	construct += "<h1 id=\"firstHeading\" class=\"firstHeading\">" + name[slashPos + 1:] + "</h1>"
+	construct += "<div id=\"bodyContent\" class=\"mw-body-content\"><div id=\"mw-content-text\" dir=\"ltr\" class=\"mw-content-ltr\">"
 
 	for c in fileContent:
 		construct += FormatLineToHTML(c)
 	
-	construct += "\n</div>\n</div>\n"
+	construct += "\n</div>\n</div>\n</div>\n"
 	construct += CreateSideBar()
 	construct += footer
 
