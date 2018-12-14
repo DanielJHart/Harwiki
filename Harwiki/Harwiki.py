@@ -9,7 +9,8 @@ footer = "\n</html>"
 wikiName = ""
 handlingTable = False
 listOfPages = list()
-
+contentsTable = ""
+placedContents = False
 # 
 
 # Functions
@@ -63,13 +64,20 @@ def FormatLineToHTML(line: str):
 	endTag = ""
 	content = ""
 	isHeader = False
+	
 	global handlingTable
+	global placedContents
 
 	if line.startswith(Constant.HEADER3):
 		begTag, endTag, line = SetTagsAndReplace("\n<h3>", "</h3>", line, Constant.HEADER3, "")
 		isHeader = True
 	elif line.startswith(Constant.HEADER2):
 		begTag, endTag, line = SetTagsAndReplace("\n<h2>", "</h2>", line, Constant.HEADER2, "")
+		
+		if not placedContents:
+			begTag = contentsTable + begTag
+			placedContents = True
+
 		isHeader = True
 	elif line.startswith(Constant.HEADER1):
 		begTag, endTag, line = SetTagsAndReplace("\n<h1\">", "</h1>", line, Constant.HEADER1, "")
@@ -157,8 +165,40 @@ def CreateSideBar():
 	output += "</div></div>\n</body>"
 	return output
 
+def CreateTableOfContents(lines):
+	content = "<div id=\"toc\" class=\"toc\"><div class=\"toctile\" lang=\"en\" dir=\"ltr\"><h2>Contents</h2>\n</div><ul>"
+	subheadingNumber = 1
+	inSubHeading = False
+	section = 1
+	heading = 0
+	
+	for line in lines:
+		if line.startswith(Constant.HEADER3):
+			cleanedText = line.replace(Constant.HEADER3 + "", "")
+			content += "<li class=\"toclevel-2 tocsection-" + str(section) + "\"><a href=\"#" + cleanedText + "\"><span class=\"tocnumber\">" + str(heading) + "." + str(subheadingNumber) + "</span><span class=\"toctext\">" + cleanedText + "</span></a></li>"
+			subheadingNumber += 1
+			inSubHeading = True
+			section += 1
+		elif line.startswith(Constant.HEADER2):
+			cleanedText = line.replace(Constant.HEADER2 + "", "")
+			heading += 1
+			if inSubHeading:
+				content += "</ul></li>"
+				subheadingNumber = 1
+				inSubHeading = False
+			
+			content += "<li class=\"toclevel-1 tocsection-" + str(section) + "\"><a href=\"#" + cleanedText + "\">" + str(heading) + cleanedText + "<ul>"
+
+			isHeader = True
+			
+			section += 1
+	
+	content += "</ul></a></li></ul></div>"
+	return content
+
 def CreatePage(name: str):
 	global wikiName
+	global contentsTable
 	file = open(name, "r")
 	name = name.replace(".wiki", "")
 	print("Creating page: " + name)
@@ -176,7 +216,9 @@ def CreatePage(name: str):
 	construct += "\n<body>\n<div id=\"content\" class=\"mw-body\" role=\"main\">\n"
 	construct += "<h1 id=\"firstHeading\" class=\"firstHeading\">" + name[slashPos + 1:] + "</h1>"
 	construct += "<div id=\"bodyContent\" class=\"mw-body-content\"><div id=\"mw-content-text\" dir=\"ltr\" class=\"mw-content-ltr\">"
-
+	
+	contentsTable = CreateTableOfContents(fileContent)
+	
 	for c in fileContent:
 		construct += FormatLineToHTML(c)
 	
@@ -188,6 +230,7 @@ def CreatePage(name: str):
 	out.write(construct)
 	out.close()
 # ~CreatePage
+
 
 def IsFolder(name: str):
 	return name.find(".") == -1
@@ -211,6 +254,8 @@ def Main():
 	# Get all of the 
 	GatherWikiFiles(dir, wikiName)
 
+	
+	
 	for page in listOfPages:
 		CreatePage(page)
 	
