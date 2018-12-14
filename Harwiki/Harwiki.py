@@ -59,6 +59,62 @@ def HandleTableHeading(line: str):
 	begTag, endTag, line = SetTagsAndReplace("\n<tr><th colspan=\"2\" style=\"text-align: center; font-weight: bold; width: 100%;\">", "</th></tr>", line, Constant.TABLEHEADING, "\n")
 	return begTag, endTag, line
 	
+def HandleInlineCommand(i: int, line: str):
+	closingBrace = line.find(Constant.INLINECOMMANDEND, i)
+	openingBracket = line.find(Constant.INLINECOMMANDTEXTBEG, closingBrace)
+	closingBracket = line.find(Constant.INLINECOMMANDTEXTEND, openingBracket)
+	commandText = line[i + 1 : closingBrace]
+	htmlLinkText = ""
+	content = ""
+	
+	if commandText == Constant.BOLD:
+		content += "<b>" + line[openingBracket + 1 :closingBracket] + "</b>"
+		skipTo = closingBracket + 1
+	elif commandText == Constant.ITALICS:
+		content += "<i>" + line[openingBracket + 1 :closingBracket] + "</i>"
+		skipTo = closingBracket + 1
+	elif commandText == Constant.UNDERLINE:
+		content += "<u>" + line[openingBracket + 1 :closingBracket] + "</u>"
+		skipTo = closingBracket + 1
+	else:
+		if commandText.startswith("https"):
+			htmlLinkText = commandText
+		else:
+			fullPath = ""
+			for page in listOfPages:
+				if page.find(commandText) > - 1:
+					fullPath = page[:-5]
+				
+			if fullPath == "":
+				print("Could not find link or command: " + commandText)
+				return "", -1
+				
+			correctedText = fullPath
+			correctedText = correctedText.replace(wikiName + "/", "")
+			correctedText = correctedText.replace(" ", "%20")
+			correctedText = correctedText + ".html"
+			htmlLinkText = correctedText
+
+		content = "<a href =\"" + htmlLinkText + "\">" + line[openingBracket + 1 :closingBracket] + "</a>"
+		skipTo = closingBracket + 1
+	return content, skipTo
+
+def FormatLine(line: str):
+	content = ""
+	skipTo = 0
+	for i in range(len(line)):
+		if i < skipTo:
+			continue
+		
+		c = line[i]
+		if c == Constant.INLINECOMMANDBEG:
+			ret, skipTo = HandleInlineCommand(i, line)
+			content += ret
+		else:
+			content += c
+
+	return content
+
 def FormatLineToHTML(line: str):
 	begTag = ""
 	endTag = ""
@@ -101,42 +157,7 @@ def FormatLineToHTML(line: str):
 	if isHeader:
 		line = line[:-1]
 
-	content = ""
-	skipTo = 0
-	for i in range(len(line)):
-		if i < skipTo:
-			continue
-		
-		c = line[i]
-		if c == Constant.LINKBEG:
-			closingBrace = line.find(Constant.LINKEND, i)
-			openingBracket = line.find(Constant.LINKTBEG, closingBrace)
-			closingBracket = line.find(Constant.LINKTEND, openingBracket)
-			linkText = line[i + 1 : closingBrace]
-			htmlLinkText = ""
-			
-			if linkText.startswith("https"):
-				htmlLinkText = linkText
-			else:
-				fullPath = ""
-				for page in listOfPages:
-					if page.find(linkText) > - 1:
-						fullPath = page[:-5]
-				
-				if fullPath == "":
-					print("Could not find link: " + linkText)
-					continue
-				
-				correctedText = fullPath
-				correctedText = correctedText.replace(wikiName + "/", "")
-				correctedText = correctedText.replace(" ", "%20")
-				correctedText = correctedText + ".html"
-				htmlLinkText = correctedText
-
-			content += "<a href =\"" + htmlLinkText + "\">" + line[openingBracket + 1 :closingBracket] + "</a>"
-			skipTo = closingBracket + 1
-		else:
-			content += c
+	content = FormatLine(line)
 
 	return begTag + content + endTag
 # ~FormatLineToHTML
