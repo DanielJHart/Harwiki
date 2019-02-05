@@ -27,11 +27,11 @@ Tables are started with a `-T-` and each table item is started with a `-Tr-`. On
 Inline commands are used for things like making text bold, italic or linking to something else.
 
 ### Bold
-Text is styled as bold with `[-B-](Text to be bold). This would generate:
+Text is styled as bold with `[-B-](Text to be bold)`. This would generate:
 **Text to be bold**
 
 ### Italics
-Text is put into italics with `[-I-](Text to be italic). This would generate:
+Text is put into italics with `[-I-](Text to be italic)`. This would generate:
 *Text to be italic*
 
 ### Links
